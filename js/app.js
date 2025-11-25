@@ -35,20 +35,37 @@
     };
 
     function generateProductCode(manufacturerName, category) {
+      console.log('generateProductCode 呼び出し:', { manufacturerName, category });
+
       const manufacturerCode = MANUFACTURER_CODES[manufacturerName] || 'XX';
       const categoryCode = CATEGORY_CODES[category] || 'XX';
 
+      console.log('コード変換:', { manufacturerCode, categoryCode });
+
+      if (manufacturerCode === 'XX') {
+        console.warn('メーカーコード未登録:', manufacturerName);
+      }
+      if (categoryCode === 'XX') {
+        console.warn('カテゴリコード未登録:', category);
+      }
+
       // Get all existing products for this manufacturer and category
       const products = dataStore.getProducts();
+      console.log('既存商品数:', products.length);
+
       const sameTypeProducts = products.filter(p =>
         p.manufacturerName === manufacturerName && p.category === category
       );
+      console.log('同種商品数:', sameTypeProducts.length);
 
       // Calculate next sequence number
       const sequenceNumber = sameTypeProducts.length + 1;
       const paddedNumber = String(sequenceNumber).padStart(4, '0');
 
-      return `${manufacturerCode}-${categoryCode}-${paddedNumber}`;
+      const productCode = `${manufacturerCode}-${categoryCode}-${paddedNumber}`;
+      console.log('生成された商品コード:', productCode);
+
+      return productCode;
     }
 
     // ========================
@@ -697,33 +714,52 @@
       async handleProductSubmit(e) {
         e.preventDefault();
 
-        const manufacturerName = this.currentUser.company;
-        const category = document.getElementById('product-category').value;
-        const productCode = generateProductCode(manufacturerName, category);
+        try {
+          // バリデーション
+          if (!this.productFormData) {
+            this.productFormData = { image: null, files: [] };
+          }
 
-        const product = {
-          id: uuid(),
-          productCode: productCode,
-          manufacturerName: manufacturerName,
-          productName: document.getElementById('product-name').value,
-          category: category,
-          description: document.getElementById('product-description').value,
-          price: parseInt(document.getElementById('product-price').value),
-          lotSize: parseInt(document.getElementById('product-lot').value),
-          imageBase64: this.productFormData.image ? this.productFormData.image.base64 : null,
-          imageMime: this.productFormData.image ? this.productFormData.image.mime : null,
-          attachments: this.productFormData.files,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        };
+          const manufacturerName = this.currentUser.company;
+          const category = document.getElementById('product-category').value;
 
-        dataStore.addProduct(product);
-        showToast(`商品を登録しました（商品コード: ${productCode}）`, 'success');
+          console.log('商品登録開始:', { manufacturerName, category });
 
-        document.getElementById('product-form').reset();
-        this.productFormData = { image: null, files: [] };
-        document.getElementById('image-preview').className = 'image-preview hidden';
-        document.getElementById('files-list').innerHTML = '';
+          // 商品コード生成
+          const productCode = generateProductCode(manufacturerName, category);
+          console.log('商品コード生成成功:', productCode);
+
+          const product = {
+            id: uuid(),
+            productCode: productCode,
+            manufacturerName: manufacturerName,
+            productName: document.getElementById('product-name').value,
+            category: category,
+            description: document.getElementById('product-description').value,
+            price: parseInt(document.getElementById('product-price').value),
+            lotSize: parseInt(document.getElementById('product-lot').value),
+            imageBase64: this.productFormData.image ? this.productFormData.image.base64 : null,
+            imageMime: this.productFormData.image ? this.productFormData.image.mime : null,
+            attachments: this.productFormData.files || [],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          };
+
+          console.log('商品データ作成:', product);
+
+          dataStore.addProduct(product);
+          console.log('商品登録完了');
+
+          showToast(`商品を登録しました（商品コード: ${productCode}）`, 'success');
+
+          document.getElementById('product-form').reset();
+          this.productFormData = { image: null, files: [] };
+          document.getElementById('image-preview').className = 'image-preview hidden';
+          document.getElementById('files-list').innerHTML = '';
+        } catch (error) {
+          console.error('商品登録エラー:', error);
+          showToast(`商品登録に失敗しました: ${error.message}`, 'error');
+        }
       },
 
       // ========================

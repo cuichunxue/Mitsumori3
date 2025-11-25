@@ -618,18 +618,24 @@
       },
 
       async processImage(file) {
-        if (file.size > 5 * 1024 * 1024) {
-          showToast('画像サイズは5MB以下にしてください', 'error');
+        // 画像サイズを制限（localStorageの容量問題を防ぐ）
+        if (file.size > 500 * 1024) { // 500KB制限
+          showToast('画像サイズは500KB以下にしてください（容量制限のため）', 'error');
           return;
         }
 
-        const base64 = await readFileAsBase64(file);
-        this.productFormData.image = {
-          filename: file.name,
-          mime: file.type,
-          size: file.size,
-          base64
-        };
+        try {
+          const base64 = await readFileAsBase64(file);
+          this.productFormData.image = {
+            filename: file.name,
+            mime: file.type,
+            size: file.size,
+            base64
+          };
+        } catch (error) {
+          console.error('画像処理エラー:', error);
+          showToast('画像の処理に失敗しました', 'error');
+        }
 
         const preview = document.getElementById('image-preview');
         preview.className = 'image-preview';

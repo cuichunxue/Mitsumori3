@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>デバッグ - 商品登録テスト</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    .test { padding: 10px; margin: 10px 0; border: 1px solid #ccc; }
+    .success { background: #d4edda; }
+    .error { background: #f8d7da; }
+    pre { background: #f5f5f5; padding: 10px; overflow: auto; }
+  </style>
+</head>
+<body>
+  <h1>🔍 商品登録デバッグ</h1>
+
+  <div class="test">
+    <h3>テスト1: メーカーコード確認</h3>
+    <button onclick="testManufacturerCodes()">実行</button>
+    <pre id="result1"></pre>
+  </div>
+
+  <div class="test">
+    <h3>テスト2: 商品コード生成テスト</h3>
+    <button onclick="testProductCodeGeneration()">実行</button>
+    <pre id="result2"></pre>
+  </div>
+
+  <div class="test">
+    <h3>テスト3: 商品登録テスト</h3>
+    <select id="testMaker">
+      <option>星空製菓</option>
+      <option>桜菓房</option>
+      <option>風月堂</option>
+      <option>旭飴本舗</option>
+      <option>翔和ビスケット</option>
+      <option>葵堂</option>
+      <option>華月糖果</option>
+      <option>夕凪キャンディ</option>
+      <option>大和コンフェク</option>
+      <option>瑞穂ショコラ</option>
+      <option>麗峰パイ</option>
+      <option>翠松煎餅</option>
+      <option>朱鷺ラムネ</option>
+      <option>千歳キャラメル</option>
+      <option>燦光モナカ</option>
+      <option>清流マシュマロ</option>
+      <option>極光クラッカー</option>
+      <option>若葉タルト</option>
+      <option>月光ドラジェ</option>
+      <option>琥珀ボンボン</option>
+    </select>
+    <button onclick="testProductRegistration()">テスト登録</button>
+    <pre id="result3"></pre>
+  </div>
+
+  <div class="test">
+    <h3>現在の商品一覧</h3>
+    <button onclick="showProducts()">表示</button>
+    <button onclick="clearProducts()" style="background: red; color: white;">全削除</button>
+    <pre id="result4"></pre>
+  </div>
+
+  <script src="js/app.js"></script>
+  <script>
+    function testManufacturerCodes() {
+      const MANUFACTURERS = [
+        '星空製菓', '桜菓房', '風月堂', '旭飴本舗', '翔和ビスケット',
+        '葵堂', '華月糖果', '夕凪キャンディ', '大和コンフェク', '瑞穂ショコラ',
+        '麗峰パイ', '翠松煎餅', '朱鷺ラムネ', '千歳キャラメル', '燦光モナカ',
+        '清流マシュマロ', '極光クラッカー', '若葉タルト', '月光ドラジェ', '琥珀ボンボン'
+      ];
+
+      let result = 'メーカーコードチェック:\n\n';
+      const codes = {};
+
+      MANUFACTURERS.forEach(m => {
+        try {
+          const code = generateProductCode(m, '飴').split('-')[0];
+          result += `${m}: ${code}\n`;
+
+          if (codes[code]) {
+            result += `  ⚠️ 重複! ${codes[code]} と ${m}\n`;
+          }
+          codes[code] = m;
+        } catch (e) {
+          result += `${m}: ❌ エラー - ${e.message}\n`;
+        }
+      });
+
+      document.getElementById('result1').textContent = result;
+    }
+
+    function testProductCodeGeneration() {
+      const testCases = [
+        { maker: '星空製菓', category: '飴' },
+        { maker: '桜菓房', category: 'チョコ' },
+        { maker: '燦光モナカ', category: 'その他' }
+      ];
+
+      let result = '商品コード生成テスト:\n\n';
+
+      testCases.forEach(tc => {
+        try {
+          const code = generateProductCode(tc.maker, tc.category);
+          result += `✅ ${tc.maker} - ${tc.category}: ${code}\n`;
+        } catch (e) {
+          result += `❌ ${tc.maker} - ${tc.category}: エラー - ${e.message}\n`;
+        }
+      });
+
+      document.getElementById('result2').textContent = result;
+    }
+
+    function testProductRegistration() {
+      const maker = document.getElementById('testMaker').value;
+
+      try {
+        const code = generateProductCode(maker, '飴');
+        const product = {
+          id: 'test-' + Date.now(),
+          productCode: code,
+          manufacturerName: maker,
+          productName: 'テスト商品',
+          category: '飴',
+          description: 'デバッグ用テスト商品',
+          price: 1000,
+          lotSize: 50,
+          imageBase64: null,
+          imageMime: null,
+          attachments: [],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+
+        dataStore.addProduct(product);
+
+        document.getElementById('result3').textContent =
+          `✅ 登録成功!\n\nメーカー: ${maker}\n商品コード: ${code}\n\n商品一覧を表示して確認してください。`;
+      } catch (e) {
+        document.getElementById('result3').textContent =
+          `❌ 登録失敗\n\nエラー: ${e.message}\n\nStack:\n${e.stack}`;
+      }
+    }
+
+    function showProducts() {
+      const products = dataStore.getProducts();
+      document.getElementById('result4').textContent =
+        `商品数: ${products.length}件\n\n` +
+        JSON.stringify(products, null, 2);
+    }
+
+    function clearProducts() {
+      if (confirm('本当に全商品を削除しますか？')) {
+        localStorage.removeItem('products');
+        document.getElementById('result4').textContent = '✅ 全商品を削除しました';
+      }
+    }
+  </script>
+</body>
+</html>
